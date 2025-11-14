@@ -50,7 +50,7 @@ namespace GameServerApi.Controllers
 
         // POST api/<UserController>
         [HttpPost("Register")]
-        public async Task<ActionResult<User>> RegisterUser(UserInfo newUser)
+        public async Task<ActionResult<User>> RegisterUser(UserPass newUser)
         {
             var hasher = new PasswordHasher<User>();
             // on créer une nouvelle confiture avec les informations reçu
@@ -66,13 +66,13 @@ namespace GameServerApi.Controllers
 
         // POST api/<UserController>
         [HttpPost("Login")]
-        public async Task<ActionResult<UserPublic>> Login(UserInfo userInfo)
+        public async Task<ActionResult<UserPublic>> Login(UserPass userPass)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Pseudo == userInfo.Pseudo);
+                .FirstOrDefaultAsync(u => u.Pseudo == userPass.Pseudo);
 
             // non trouvé ou mot de passe incorrect
-            if (user == null || !user.VerifyPassword(userInfo.Password))
+            if (user == null || !user.VerifyPassword(userPass.Password))
             {
                 return Unauthorized(new { message = "Pseudo ou mot de passe incorrect" });
             }

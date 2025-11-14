@@ -17,7 +17,8 @@ public class User
     public User(string pseudo, string password, Role userRole)
     {
         Pseudo = pseudo;
-        Password = password;
+        var hasher = new PasswordHasher<User>();
+        Password = hasher.HashPassword(this, password);
         UserRole = userRole;
         Id = ++IdCounter;
     }
@@ -51,6 +52,7 @@ public class User
         if (!VerifyPassword(currentPassword))
             throw new InvalidOperationException("Mot de passe actuel incorrect");
 
-        Password = newPassword;
+        var hasher = new PasswordHasher<User>();
+        Password = hasher.HashPassword(this, newPassword);
     }
 }

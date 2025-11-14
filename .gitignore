@@ -291,3 +291,4 @@ __pycache__/
 
 # my project useless files
 bin/
+obj/
