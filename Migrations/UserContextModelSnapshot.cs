@@ -26,12 +26,12 @@ namespace GameServerApi.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Pseudo")
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("UserRole")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

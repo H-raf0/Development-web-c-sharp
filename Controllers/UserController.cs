@@ -25,7 +25,7 @@ namespace GameServerApi.Controllers
         public async Task<ActionResult<List<UserPublic>>> GetAllUsers()
         {
             var users = await _context.Users
-                .Select(u => new UserPublic(u.Id, u.Pseudo, u.UserRole))
+                .Select(u => new UserPublic(u.Id, u.Username, u.Role))
                 .ToListAsync();
 
             return Ok(users);
@@ -37,48 +37,108 @@ namespace GameServerApi.Controllers
         {
             var user = await _context.Users
                 .Where(u => u.Id == id)
-                .Select(u => new UserPublic(u.Id, u.Pseudo, u.UserRole))
+                .Select(u => new UserPublic(u.Id, u.Username, u.Role))
                 .FirstOrDefaultAsync();
 
             if (user == null)
             {
-                return NotFound();
+                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }
 
             return Ok(user);
         }
 
+        // GET api/<UserController>/Search/{name}
+        [HttpGet("Search/{name}")]
+        public async Task<ActionResult<IEnumerable<UserPublic>>> SearchUsers(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return Ok(Array.Empty<UserPublic>());
+
+            var lowerName = name.ToLower();
+
+            var users = await _context.Users
+                .Where(u => u.Username.ToLower().Contains(lowerName) || u.Username.ToLower() == lowerName)
+                .ToListAsync();
+
+            var result = users.Select(u => new UserPublic(u.Id, u.Username, u.Role));
+            return Ok(result);
+        }
+
+        // GET: api/<UserController>/AllAdmin
+        [HttpGet("AllAdmin")]
+        public async Task<ActionResult<IEnumerable<UserPublic>>> GetAllAdminUsers()
+        {
+            // Get all users with Role.ADMIN
+            var admins = await _context.Users
+                .Where(u => u.Role == Role.ADMIN)
+                .ToListAsync();
+
+            // Convert to UserPublic DTO
+            var result = admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
+
+            return Ok(result);
+        }
+
+
         // POST api/<UserController>
         [HttpPost("Register")]
-        public async Task<ActionResult<User>> RegisterUser(UserPass newUser)
+        public async Task<ActionResult<UserPublic>> RegisterUser([FromBody] UserPass newUser)
         {
-            var hasher = new PasswordHasher<User>();
-            // on créer une nouvelle confiture avec les informations reçu
-            User user = new User(newUser.Pseudo, "", Role.USER);
-            user.Password = hasher.HashPassword(user, newUser.Password);
-            // on l'ajoute a notre contexte (BDD)
-            _context.Users.Add(user);
-            // on enregistre les modifications dans la BDD ce qui remplira le champ Id de notre objet
-            await _context.SaveChangesAsync();
-            // on retourne un code 201 pour indiquer que la création a bien eu lieu
-            return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, user);
+            // Check if username already exists
+            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
+            if (exists)
+            {
+                return BadRequest(new ErrorResponse(
+                    "Username already exists",
+                    "USERNAME_EXISTS"
+                ));
+            }
+
+            try
+            {
+                // Create user with password (constructor handles hashing)
+                User user = new User(newUser.Username, newUser.Password, Role.USER);
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Return 201 Created
+                return CreatedAtAction(nameof(GetUserById),
+                    new { id = user.Id },
+                    new UserPublic(user.Id, user.Username, user.Role));
+            }
+            catch (Exception ex)
+            {
+                // Any unexpected failure
+                return BadRequest(new ErrorResponse(
+                    $"Registration failed: {ex.Message}",
+                    "REGISTRATION_FAILED"
+                ));
+            }
         }
+
 
         // POST api/<UserController>
         [HttpPost("Login")]
-        public async Task<ActionResult<UserPublic>> Login(UserPass userPass)
+        public async Task<ActionResult<UserPublic>> Login([FromBody] UserPass userPass)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Pseudo == userPass.Pseudo);
+                .FirstOrDefaultAsync(u => u.Username == userPass.Username);
 
             // non trouvé ou mot de passe incorrect
             if (user == null || !user.VerifyPassword(userPass.Password))
             {
-                return Unauthorized(new { message = "Pseudo ou mot de passe incorrect" });
+                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
+            }
+            if (!user.VerifyPassword(userPass.Password))
+            {
+                return Unauthorized(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }
 
+
             // si tout est bon, on retourne les infos publiques
-            var userPublic = new UserPublic(user.Id, user.Pseudo, user.UserRole);
+            var userPublic = new UserPublic(user.Id, user.Username, user.Role);
             return Ok(userPublic);
         }
 
@@ -87,63 +147,42 @@ namespace GameServerApi.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
-        // maj du user
-        public async Task<ActionResult<UserPublic>> PutUser(int id, [FromBody] UserUpdate userUpdate)
+        public async Task<ActionResult<User>> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
         {
-            // Vérifier que l'id de l'URL correspond à un utilisateur
+            // Check if the user exists
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
-                return NotFound(new { message = $"Utilisateur avec id={id} non trouvé" });
+                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }
 
-            try
+            // Update username
+            if (!string.IsNullOrEmpty(userUpdate.Username))
             {
-                if (!string.IsNullOrEmpty(userUpdate.NewPseudo))
-                {
-                    // Mise à jour du pseudo
-                    user.Pseudo = userUpdate.NewPseudo;
-                }
-
-                if (userUpdate.NewUserRole.HasValue)
-                {
-                    // Mise à jour du rôle
-                    user.UserRole = userUpdate.NewUserRole.Value;
-                }
-
-                // Si un changement de mot de passe est demandé
-                if (!string.IsNullOrEmpty(userUpdate.NewPassword))
-                {
-                    if (string.IsNullOrEmpty(userUpdate.CurrentPassword))
-                    {
-                        return BadRequest(new { message = "Le mot de passe actuel est requis" });
-                    }
-
-                    if (!user.VerifyPassword(userUpdate.CurrentPassword))
-                    {
-                        return BadRequest(new { message = "Mot de passe actuel incorrect" });
-                    }
-
-                    // Mettre à jour le mot de passe
-                    user.UpdatePassword(userUpdate.CurrentPassword, userUpdate.NewPassword);
-                }
-
-                // Sauvegarder les changements
-                await _context.SaveChangesAsync();
-
-                // Retourner la version publique (DTO) de l'utilisateur
-                var userPublic = new UserPublic(user.Id, user.Pseudo, user.UserRole);
-                return Ok(userPublic);
+                user.Username = userUpdate.Username;
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+
+            // Update role
+            if (userUpdate.Role != null)
             {
-                return BadRequest(new { message = ex.Message });
+                // Mise à jour du rôle
+                user.Role = userUpdate.Role.Value;
             }
-            catch (DbUpdateConcurrencyException)
+
+            // Update password
+            if (!string.IsNullOrEmpty(userUpdate.Password))
             {
-                return StatusCode(500, new { message = "Erreur de concurrence lors de la mise à jour" });
+                user.UpdatePassword(userUpdate.Password);
             }
+
+            // Save changes
+            await _context.SaveChangesAsync();
+
+            return Ok(user);
+
         }
+
+
 
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
@@ -154,25 +193,19 @@ namespace GameServerApi.Controllers
 
             if (user == null)
             {
-                return NotFound(new { message = $"Utilisateur avec id={id} non trouvé" });
+                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }
 
-            try
-            {
-                // Supprimer l'utilisateur du contexte
-                _context.Users.Remove(user);
 
-                // Sauvegarder les modifications dans la base de données
-                await _context.SaveChangesAsync();
+            // Supprimer l'utilisateur du contexte
+            _context.Users.Remove(user);
 
-                // Retourner un code 204 (No Content) pour indiquer que la suppression a réussi
-                return NoContent();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Gérer les erreurs de base de données (contraintes, etc.)
-                return StatusCode(500, new { message = "Erreur lors de la suppression de l'utilisateur", details = ex.Message });
-            }
+            // Sauvegarder les modifications dans la base de données
+            await _context.SaveChangesAsync();
+
+
+            return Ok(true);
+
         }
     }
 }

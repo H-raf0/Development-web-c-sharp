@@ -1,18 +1,18 @@
 public class UserPublic
 {
     public int Id { get; }
-    public string Pseudo { get; }
-    public Role UserRole { get; }
+    public string Username { get; }
+    public Role Role { get; }
 
-    public UserPublic(int id, string pseudo, Role userRole)
+    public UserPublic(int id, string username, Role role)
     {
         Id = id;
-        Pseudo = pseudo;
-        UserRole = userRole;
+        Username = username;
+        Role = role;
     }
 
-    public UserPublic(string pseudo, Role userRole)
-        : this(0, pseudo, userRole)
+    public UserPublic(string username, Role role)
+        : this(0, username, role)
     {
     }
 }

@@ -16,8 +16,8 @@ namespace GameServerApi.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Pseudo = table.Column<string>(type: "TEXT", nullable: false),
-                    UserRole = table.Column<int>(type: "INTEGER", nullable: false),
+                    Username = table.Column<string>(type: "TEXT", nullable: false),
+                    Role = table.Column<int>(type: "INTEGER", nullable: false),
                     Password = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

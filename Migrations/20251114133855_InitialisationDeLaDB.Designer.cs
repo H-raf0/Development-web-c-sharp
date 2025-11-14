@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GameServerApi.Migrations
 {
     [DbContext(typeof(UserContext))]
-    [Migration("20251114120956_InitialisationDeLaDB")]
+    [Migration("20251114133855_InitialisationDeLaDB")]
     partial class InitialisationDeLaDB
     {
         /// <inheritdoc />
@@ -29,12 +29,12 @@ namespace GameServerApi.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Pseudo")
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("UserRole")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

@@ -1,13 +1,11 @@
-public class UserUpdate
+public class UserPass
 {
     public string Username { get; set; }
-    public Role? Role { get; set; }
     public string Password { get; set; }
 
-    public UserUpdate(string username, string password, Role? role)
+    public UserPass(string username, string password)
     {
         Username = username;
         Password = password;
-        Role = role;
     }
 }
