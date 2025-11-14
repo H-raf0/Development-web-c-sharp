@@ -3,6 +3,7 @@ namespace GameServerApi;
 
 using Scalar.AspNetCore;
 using GameServerApi.Models;
+using Microsoft.AspNetCore.Identity;
 
 public class Program
 {
@@ -16,6 +17,7 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         builder.Services.AddDbContext<UserContext>();
+        builder.Services.AddScoped<PasswordHasher<User>>();
 
         var app = builder.Build();
 

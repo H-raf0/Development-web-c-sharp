@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 using GameServerApi.Models;
 
@@ -18,52 +19,67 @@ namespace GameServerApi.Controllers
         {
             _context = ctx;
         }
-    
-        // liste temporaire
-        private static List<User> users = new List<User>
-        {
-            new User("admin", "adminpass", Role.ADMIN),
-            new User("user1", "user1pass", Role.USER)
-        };
+
         // GET: api/<UserController>/All
         [HttpGet("All")]
-        public List<UserPublic> GetAllUsers()
+        public async Task<ActionResult<List<UserPublic>>> GetAllUsers()
         {
-            // Return public view including Id
-            return users.Select(u => new UserPublic(u.Id, u.Pseudo, u.UserRole)).ToList();
+            var users = await _context.Users
+                .Select(u => new UserPublic(u.Id, u.Pseudo, u.UserRole))
+                .ToListAsync();
+
+            return Ok(users);
         }
 
         // GET api/<UserController>/{id}
         [HttpGet("{id}")]
-        public UserPublic GetUserById(int id)
+        public async Task<ActionResult<UserPublic>> GetUserById(int id)
         {
-            var user = users.FirstOrDefault(u => u.Id == id);
+            var user = await _context.Users
+                .Where(u => u.Id == id)
+                .Select(u => new UserPublic(u.Id, u.Pseudo, u.UserRole))
+                .FirstOrDefaultAsync();
+
             if (user == null)
             {
-                return new UserPublic(0, "Unknown", Role.USER); // or handle not found case as needed
+                return NotFound();
             }
-            return new UserPublic(user.Id, user.Pseudo, user.UserRole);
+
+            return Ok(user);
         }
 
         // POST api/<UserController>
         [HttpPost("Register")]
-        public UserPublic RegisterUser(UserInfo newUser)
+        public async Task<ActionResult<User>> RegisterUser(UserInfo newUser)
         {
-            users.Add(new User(newUser.Pseudo, newUser.Mdp, Role.USER));
-            return new UserPublic(newUser.Pseudo, Role.USER);
+            var hasher = new PasswordHasher<User>();
+            // on créer une nouvelle confiture avec les informations reçu
+            User user = new User(newUser.Pseudo, "", Role.USER);
+            user.Password = hasher.HashPassword(user, newUser.Password);
+            // on l'ajoute a notre contexte (BDD)
+            _context.Users.Add(user);
+            // on enregistre les modifications dans la BDD ce qui remplira le champ Id de notre objet
+            await _context.SaveChangesAsync();
+            // on retourne un code 201 pour indiquer que la création a bien eu lieu
+            return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, user);
         }
 
         // POST api/<UserController>
         [HttpPost("Login")]
-        public UserPublic Login(UserInfo userInfo)
+        public async Task<ActionResult<UserPublic>> Login(UserInfo userInfo)
         {
-            // Use VerifyPassword to avoid accessing private password field directly
-            var user = users.FirstOrDefault(u => u.Pseudo == userInfo.Pseudo && u.VerifyPassword(userInfo.Mdp));
-            if (user != null)
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Pseudo == userInfo.Pseudo);
+
+            // non trouvé ou mot de passe incorrect
+            if (user == null || !user.VerifyPassword(userInfo.Password))
             {
-                return new UserPublic(user.Id, user.Pseudo, user.UserRole);
+                return Unauthorized(new { message = "Pseudo ou mot de passe incorrect" });
             }
-            return new UserPublic(0, "Unknown", Role.USER);
+
+            // si tout est bon, on retourne les infos publiques
+            var userPublic = new UserPublic(user.Id, user.Pseudo, user.UserRole);
+            return Ok(userPublic);
         }
 
 
@@ -71,14 +87,92 @@ namespace GameServerApi.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        // maj du user
+        public async Task<ActionResult<UserPublic>> PutUser(int id, [FromBody] UserUpdate userUpdate)
         {
+            // Vérifier que l'id de l'URL correspond à un utilisateur
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { message = $"Utilisateur avec id={id} non trouvé" });
+            }
+
+            try
+            {
+                if (!string.IsNullOrEmpty(userUpdate.NewPseudo))
+                {
+                    // Mise à jour du pseudo
+                    user.Pseudo = userUpdate.NewPseudo;
+                }
+
+                if (userUpdate.NewUserRole.HasValue)
+                {
+                    // Mise à jour du rôle
+                    user.UserRole = userUpdate.NewUserRole.Value;
+                }
+
+                // Si un changement de mot de passe est demandé
+                if (!string.IsNullOrEmpty(userUpdate.NewPassword))
+                {
+                    if (string.IsNullOrEmpty(userUpdate.CurrentPassword))
+                    {
+                        return BadRequest(new { message = "Le mot de passe actuel est requis" });
+                    }
+
+                    if (!user.VerifyPassword(userUpdate.CurrentPassword))
+                    {
+                        return BadRequest(new { message = "Mot de passe actuel incorrect" });
+                    }
+
+                    // Mettre à jour le mot de passe
+                    user.UpdatePassword(userUpdate.CurrentPassword, userUpdate.NewPassword);
+                }
+
+                // Sauvegarder les changements
+                await _context.SaveChangesAsync();
+
+                // Retourner la version publique (DTO) de l'utilisateur
+                var userPublic = new UserPublic(user.Id, user.Pseudo, user.UserRole);
+                return Ok(userPublic);
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return StatusCode(500, new { message = "Erreur de concurrence lors de la mise à jour" });
+            }
         }
 
-        // DELETE api/<UserController>/5
+        // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public async Task<ActionResult> DeleteUser(int id)
         {
+            // Rechercher l'utilisateur par son ID
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+            {
+                return NotFound(new { message = $"Utilisateur avec id={id} non trouvé" });
+            }
+
+            try
+            {
+                // Supprimer l'utilisateur du contexte
+                _context.Users.Remove(user);
+
+                // Sauvegarder les modifications dans la base de données
+                await _context.SaveChangesAsync();
+
+                // Retourner un code 204 (No Content) pour indiquer que la suppression a réussi
+                return NoContent();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Gérer les erreurs de base de données (contraintes, etc.)
+                return StatusCode(500, new { message = "Erreur lors de la suppression de l'utilisateur", details = ex.Message });
+            }
         }
     }
 }

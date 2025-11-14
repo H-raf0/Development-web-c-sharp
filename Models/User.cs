@@ -1,8 +1,9 @@
+using Microsoft.AspNetCore.Identity;
 public enum Role
-    {
-        ADMIN,
-        USER
-    }
+{
+    ADMIN,
+    USER
+}
 
 public class User
 {
@@ -11,12 +12,12 @@ public class User
     public string Pseudo { get; set; } = string.Empty;
     public Role UserRole { get; set; } = Role.USER;
     // Make password property mappable by EF (keep setter private)
-    public string Mdp { get; private set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 
-    public User(string pseudo, string mdp, Role userRole)
+    public User(string pseudo, string password, Role userRole)
     {
         Pseudo = pseudo;
-        Mdp = mdp;
+        Password = password;
         UserRole = userRole;
         Id = ++IdCounter;
     }
@@ -25,9 +26,31 @@ public class User
     protected User() { }
 
     // Verifies the provided password against the stored one
-    public bool VerifyPassword(string mdp)
+
+
+    public bool VerifyPassword(string password)
     {
-        return Mdp == mdp;
+        var hasher = new PasswordHasher<User>();
+        var result = hasher.VerifyHashedPassword(this, this.Password, password);
+        if (result == PasswordVerificationResult.Success)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
     }
 
+    public void UpdatePassword(string currentPassword, string newPassword)
+    {
+        if (string.IsNullOrEmpty(newPassword))
+            throw new ArgumentException("Le nouveau mot de passe ne peut pas être vide");
+
+        if (!VerifyPassword(currentPassword))
+            throw new InvalidOperationException("Mot de passe actuel incorrect");
+
+        Password = newPassword;
+    }
 }
