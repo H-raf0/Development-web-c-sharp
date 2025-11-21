@@ -64,6 +64,32 @@ namespace GameServerApi.Controllers
 
             return Ok(progression);
         }
+
+        //POST /api/Game/Reset/{userId}
+        [HttpPost("/Game/Reset/{userId}")]
+        public async Task<ActionResult<Progression>> ResetProgression(int userId)
+        {
+            var progression = await _context.Progressions.FindAsync(userId);
+            if (progression == null)
+            {
+                return NotFound(new ErrorResponse("no progression", "NO_PROGRESSION"));
+            }
+
+            else
+            {
+                if(progression.CalculateResetCost()<=progression.count){
+                        if (progression.Count > progression.BestScore)
+                            {
+                                progression.BestScore = progression.Count;
+                            }
+                        progression.Count=0;
+                        progression.Multiplier++;
+                }
+
+            }
+        }
         
     }
 }
+
+
