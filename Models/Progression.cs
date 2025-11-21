@@ -14,6 +14,15 @@ public class Progression
         Multiplier = 1;
         BestScore = 0;
     }
+
+    public int CalculateResetCost()
+    {
+        // Exponential cost: 100 * (1.5^(multiplier-1))
+        double baseCost = 100.0;
+        double growthFactor = 1.5;
+        double cost = baseCost * Math.Pow(growthFactor, Multiplier - 1);
+        return (int)Math.Floor(cost);
+    }
     /*
     // Relation avec User
     public User? User { get; set; }

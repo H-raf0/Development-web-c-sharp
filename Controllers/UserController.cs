@@ -133,7 +133,7 @@ namespace GameServerApi.Controllers
             }
             if (!user.VerifyPassword(userPass.Password))
             {
-                return Unauthorized(new ErrorResponse("User not found", "USER_NOT_FOUND"));
+                return Unauthorized(new ErrorResponse("invalid password", "INVALID_PASSWORD"));
             }
 
 
