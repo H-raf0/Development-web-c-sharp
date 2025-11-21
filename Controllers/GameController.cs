@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+using GameServerApi.Models;
 
 namespace GameServerApi.Controllers
 {
@@ -7,36 +10,29 @@ namespace GameServerApi.Controllers
     [ApiController]
     public class GameController : ControllerBase
     {
-        // GET: api/<GameController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly ProgressionContext _context;
+        public GameController(ProgressionContext ctx)
         {
-            return new string[] { "value1", "value2" };
+            _context = ctx;
         }
 
-        // GET api/<GameController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        /*
+        // GET /api/Game/Initialize/{userId}
+        [HttpGet("{userId}")]
+        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
         {
-            return "value";
-        }
+            /*
+            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
+            if (exists)
+            {
+                return BadRequest(new ErrorResponse(
+                    "Username already exists",
+                    "USERNAME_EXISTS"
+                ));
+            }
 
-        // POST api/<GameController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<GameController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<GameController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
+            return ;
+            * /
+        }*/
     }
 }
