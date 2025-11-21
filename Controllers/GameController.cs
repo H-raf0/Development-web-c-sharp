@@ -7,36 +7,20 @@ namespace GameServerApi.Controllers
     [ApiController]
     public class GameController : ControllerBase
     {
-        // GET: api/<GameController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        [HttpGet("{UserId}")]
+        public async Task<ActionResult<Progression>> GetUserProgression(int UserId)
         {
-            return new string[] { "value1", "value2" };
-        }
+            var progression = await _context.Progressions
+                .Where(p => p.UserId == UserId)
+                .FirstOrDefaultAsync();
 
-        // GET api/<GameController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
+            if (progression == null)
+            {
+                return NotFound(new ErrorResponse("Progression not found", "PROGRESSION_NOT_FOUND"));
+            }
 
-        // POST api/<GameController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
+            return Ok(progression);
         }
-
-        // PUT api/<GameController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<GameController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
+        
     }
 }
