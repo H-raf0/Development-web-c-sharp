@@ -10,11 +10,51 @@ namespace GameServerApi.Controllers
     [ApiController]
     public class GameController : ControllerBase
     {
-        [HttpGet("{UserId}")]
-        public async Task<ActionResult<Progression>> GetUserProgression(int UserId)
+        
+        private readonly ProgressionContext _context;
+        public GameController(ProgressionContext ctx)
+        {
+            _context = ctx;
+        }
+
+        
+        // GET /api/Game/Initialize/{userId}
+        [HttpGet("Initialize/{userId}")]
+        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
+        {
+            
+            bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
+            if (exists)
+            {
+                return BadRequest(new ErrorResponse(
+                    "Progression already exists",
+                    "PROGRESSION_EXISTS"
+                ));
+            }
+
+            try
+            {
+                var progression = new Progression(userId);
+                _context.Progressions.Add(progression);
+                await _context.SaveChangesAsync();
+                return Ok(progression);
+            }
+            catch
+            {
+                return BadRequest(new ErrorResponse(
+                    "Failed to initialize",
+                    "INITIALIZATION_FAILED"
+                ));
+            }
+        
+        }
+
+        // GET /api/Game/Progression/{userId}
+        [HttpGet("Game/Progression/{userId}")]
+        public async Task<ActionResult<Progression>> GetProgression(int userId)
         {
             var progression = await _context.Progressions
-                .Where(p => p.UserId == UserId)
+                .Where(p => p.userId == userId)
                 .FirstOrDefaultAsync();
 
             if (progression == null)
@@ -25,29 +65,5 @@ namespace GameServerApi.Controllers
             return Ok(progression);
         }
         
-        private readonly ProgressionContext _context;
-        public GameController(ProgressionContext ctx)
-        {
-            _context = ctx;
-        }
-
-        /*
-        // GET /api/Game/Initialize/{userId}
-        [HttpGet("{userId}")]
-        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
-        {
-            /*
-            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
-            if (exists)
-            {
-                return BadRequest(new ErrorResponse(
-                    "Username already exists",
-                    "USERNAME_EXISTS"
-                ));
-            }
-
-            return ;
-            * /
-        }*/
     }
 }

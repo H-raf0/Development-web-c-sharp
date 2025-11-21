@@ -108,11 +108,11 @@ namespace GameServerApi.Controllers
                     new { id = user.Id },
                     new UserPublic(user.Id, user.Username, user.Role));
             }
-            catch (Exception ex)
+            catch
             {
                 // Any unexpected failure
                 return BadRequest(new ErrorResponse(
-                    $"Registration failed: {ex.Message}",
+                    "Registration failed",
                     "REGISTRATION_FAILED"
                 ));
             }
