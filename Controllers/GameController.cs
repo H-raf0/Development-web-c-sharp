@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+using GameServerApi.Models;
 
 namespace GameServerApi.Controllers
 {
@@ -22,5 +25,29 @@ namespace GameServerApi.Controllers
             return Ok(progression);
         }
         
+        private readonly ProgressionContext _context;
+        public GameController(ProgressionContext ctx)
+        {
+            _context = ctx;
+        }
+
+        /*
+        // GET /api/Game/Initialize/{userId}
+        [HttpGet("{userId}")]
+        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
+        {
+            /*
+            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
+            if (exists)
+            {
+                return BadRequest(new ErrorResponse(
+                    "Username already exists",
+                    "USERNAME_EXISTS"
+                ));
+            }
+
+            return ;
+            * /
+        }*/
     }
 }
