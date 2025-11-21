@@ -4,6 +4,7 @@ namespace GameServerApi;
 using Scalar.AspNetCore;
 using GameServerApi.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Sqlite;
 
 public class Program
 {
@@ -16,7 +17,10 @@ public class Program
         builder.Services.AddControllers();
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
+
         builder.Services.AddDbContext<UserContext>();
+        builder.Services.AddDbContext<ProgressionContext>();
+
         builder.Services.AddScoped<PasswordHasher<User>>();
 
         builder.Services.AddCors(options =>

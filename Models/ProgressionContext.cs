@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 namespace GameServerApi.Models;
 
-public class UserContext : DbContext
+public class ProgressionContext : DbContext
 {
-    public UserContext(DbContextOptions<UserContext> options)
+    public ProgressionContext(DbContextOptions<ProgressionContext> options)
         : base(options)
     {
     }
@@ -11,8 +11,8 @@ public class UserContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         // Connexion a la base sqlite
-        options.UseSqlite("Data Source=User.db");
+        options.UseSqlite("Data Source=Progression.db");
     }
 
-    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Progression> Progressions { get; set; } = null!;
 }
