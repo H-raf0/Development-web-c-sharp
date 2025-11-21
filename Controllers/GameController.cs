@@ -73,20 +73,23 @@ namespace GameServerApi.Controllers
             if (progression == null)
             {
                 return NotFound(new ErrorResponse("no progression", "NO_PROGRESSION"));
-            }if(progression.CalculateResetCost() > progression.count){
+            }
+            if (progression.CalculateResetCost() > progression.Count)
+            {
 
                 return NotFound(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
 
-            }else{
-                        if (progression.Count > progression.BestScore)
-                            {
-                                progression.BestScore = progression.Count;
-                            }
-                        progression.Count=0;
-                        progression.Multiplier++;
-                }
-
             }
+            else
+            {
+                if (progression.Count > progression.BestScore)
+                {
+                    progression.BestScore = progression.Count;
+                }
+                progression.Count = 0;
+                progression.Multiplier++;
+            }
+            return Ok(progression);
         }
         
 
