@@ -16,23 +16,36 @@ namespace GameServerApi.Controllers
             _context = ctx;
         }
 
-        /*
+        
         // GET /api/Game/Initialize/{userId}
-        [HttpGet("{userId}")]
+        [HttpGet("Initialize/{userId}")]
         public async Task<ActionResult<Progression>> InitializeProgression(int userId)
         {
-            /*
-            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
+            
+            bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
             if (exists)
             {
                 return BadRequest(new ErrorResponse(
-                    "Username already exists",
-                    "USERNAME_EXISTS"
+                    "Progression already exists",
+                    "PROGRESSION_EXISTS"
                 ));
             }
 
-            return ;
-            * /
-        }*/
+            try
+            {
+                var progression = new Progression(userId);
+                _context.Progressions.Add(progression);
+                await _context.SaveChangesAsync();
+                return Ok(progression);
+            }
+            catch
+            {
+                return BadRequest(new ErrorResponse(
+                    "Failed to initialize",
+                    "INITIALIZATION_FAILED"
+                ));
+            }
+        
+        }
     }
 }
