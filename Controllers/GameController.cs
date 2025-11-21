@@ -54,7 +54,7 @@ namespace GameServerApi.Controllers
         public async Task<ActionResult<Progression>> GetProgression(int userId)
         {
             var progression = await _context.Progressions
-                .Where(p => p.userId == userId)
+                .Where(p => p.UserId == userId)
                 .FirstOrDefaultAsync();
 
             if (progression == null)
