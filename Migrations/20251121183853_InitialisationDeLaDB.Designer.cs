@@ -7,10 +7,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace GameServerApi.Migrations.Progression
+namespace GameServerApi.Migrations
 {
-    [DbContext(typeof(ProgressionContext))]
-    [Migration("20251121115555_InitialisationDeLaDB")]
+    [DbContext(typeof(UserContext))]
+    [Migration("20251121183853_InitialisationDeLaDB")]
     partial class InitialisationDeLaDB
     {
         /// <inheritdoc />
@@ -25,9 +25,6 @@ namespace GameServerApi.Migrations.Progression
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("BestScore")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("Count")
                         .HasColumnType("INTEGER");
 
@@ -39,7 +36,40 @@ namespace GameServerApi.Migrations.Progression
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Progressions");
+                });
+
+            modelBuilder.Entity("User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Progression", b =>
+                {
+                    b.HasOne("User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

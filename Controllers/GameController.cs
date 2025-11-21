@@ -11,8 +11,8 @@ namespace GameServerApi.Controllers
     public class GameController : ControllerBase
     {
 
-        private readonly ProgressionContext _context;
-        public GameController(ProgressionContext ctx)
+        private readonly UserContext _context;
+        public GameController(UserContext ctx)
         {
             _context = ctx;
         }
@@ -21,7 +21,7 @@ namespace GameServerApi.Controllers
         // GET /api/Game/Initialize/{userId}
         [HttpGet("Initialize/{userId}")]
         public async Task<ActionResult<Progression>> InitializeProgression(int userId)
-        {
+        {  // initialization is done in UserController when creating user so what is the point of this ? 
 
             bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
             if (exists)
@@ -50,7 +50,7 @@ namespace GameServerApi.Controllers
         }
 
         // GET /api/Game/Progression/{userId}
-        [HttpGet("Game/Progression/{userId}")]
+        [HttpGet("Progression/{userId}")]
         public async Task<ActionResult<Progression>> GetProgression(int userId)
         {
             var progression = await _context.Progressions
@@ -59,42 +59,52 @@ namespace GameServerApi.Controllers
 
             if (progression == null)
             {
-                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
 
             return Ok(progression);
         }
 
-        //POST /api/Game/Reset/{userId}
-        [HttpPost("/Game/Reset/{userId}")]
+        // POST /api/Game/Reset/{userId}
+        [HttpPost("Reset/{userId}")]
         public async Task<ActionResult<Progression>> ResetProgression(int userId)
         {
-            var progression = await _context.Progressions.FindAsync(userId);
+            // The progression is linked to user by UserId, not by primary key
+            var progression = await _context.Progressions
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
             if (progression == null)
             {
-                return NotFound(new ErrorResponse("no progression", "NO_PROGRESSION"));
+                return BadRequest(new ErrorResponse("No progression", "NO_PROGRESSION"));
             }
-            if (progression.CalculateResetCost() > progression.Count)
-            {
 
-                return NotFound(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
-
-            }
-            else
+            // Check reset cost
+            var resetCost = progression.CalculateResetCost();
+            if (resetCost > progression.Count)
             {
-                if (progression.Count > progression.BestScore)
-                {
-                    progression.BestScore = progression.Count;
-                }
-                progression.Count = 0;
-                progression.Multiplier++;
+                return BadRequest(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
             }
+
+            // Update global best score if current count is higher
+            if (progression.Count > GlobalScore.BestScore)
+            {
+                GlobalScore.BestScore = progression.Count;
+                GlobalScore.UserId = userId;
+            }
+
+            // Apply reset
+            progression.Count = 0;
+            progression.Multiplier++;
+
+            await _context.SaveChangesAsync();
+
             return Ok(progression);
         }
-        
+
+
 
         // GET /api/Game/ResetCost/{userId}
-        [HttpGet("Game/ResetCost/{userId}")]
+        [HttpGet("ResetCost/{userId}")]
         public async Task<ActionResult<int>> ResetCost(int userId)
         {
             var progression = await _context.Progressions
@@ -103,17 +113,17 @@ namespace GameServerApi.Controllers
 
             if (progression == null)
             {
-                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
 
             int cost = progression.CalculateResetCost();
-            return Ok(cost);
+            return Ok(new ResetCostResponse(cost));
         }
 
 
 
         // GET /api/Game/Click/{userId}
-        [HttpGet("Game/Click/{userId}")]
+        [HttpGet("Click/{userId}")]
         public async Task<ActionResult<object>> Click(int userId)
         {
             var progression = await _context.Progressions
@@ -124,39 +134,24 @@ namespace GameServerApi.Controllers
                 return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
 
-            progression.Count += 1;
+            progression.Count += 1 * progression.Multiplier;
 
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                count = progression.Count,
-                multiplier = progression.Multiplier
-            });
+            return Ok(new ClickResponse(progression.Count, progression.Multiplier));
         }
 
         // GET /api/Game/BestScore
-        [HttpGet("Game/BestScore/")]
-        public async Task<ActionResult<object>> GetBestScore()
+        [HttpGet("BestScore")]
+        public ActionResult<BestScoreResponse> GetBestScore()
         {
-            if (!await _context.Progressions.AnyAsync())
+            // Return the global best score and its owner
+            if (GlobalScore.BestScore == 0)
             {
-                return NotFound(new
-                {
-                    error = "NO_PROGRESSIONS",
-                    message = "No progressions found"
-                });
+                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSIONS"));
             }
 
-            var best = await _context.Progressions
-                .OrderByDescending(p => p.Count)
-                .FirstAsync();
-
-            return Ok(new
-            {
-                userId = best.UserId,
-                bestScore = best.Count
-            });
+            return Ok(new BestScoreResponse(GlobalScore.UserId, GlobalScore.BestScore));
         }
 
 

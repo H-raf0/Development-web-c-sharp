@@ -1,3 +1,14 @@
 this is a readme file 
 
-note : backend and front end are not linked yet
+
+
+migration:
+dotnet ef migrations add InitialisationDeLaDB
+
+drop base: 
+dotnet ef database drop --force 
+
+update base:
+dotnet ef database update
+
+//dotnet ef migrations add AddCascadeDeleteForProgression

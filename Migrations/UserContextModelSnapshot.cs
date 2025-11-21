@@ -14,7 +14,29 @@ namespace GameServerApi.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.11");
+
+            modelBuilder.Entity("Progression", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Multiplier")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Progressions");
+                });
 
             modelBuilder.Entity("User", b =>
                 {
@@ -36,6 +58,15 @@ namespace GameServerApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Progression", b =>
+                {
+                    b.HasOne("User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

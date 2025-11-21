@@ -97,10 +97,21 @@ namespace GameServerApi.Controllers
 
             try
             {
+                // Check if any Admin exists in the database
+                bool adminExists = await _context.Users.AnyAsync(u => u.Role == Role.ADMIN);
+                
+                // Determine the role: ADMIN if no admin exists, otherwise USER
+                Role userRole = adminExists ? Role.USER : Role.ADMIN;
+
                 // Create user with password (constructor handles hashing)
-                User user = new User(newUser.Username, newUser.Password, Role.USER);
+                User user = new User(newUser.Username, newUser.Password, userRole);
 
                 _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                
+                // Initialize progression for the new user
+                var progression = new Progression(user.Id);
+                _context.Progressions.Add(progression);
                 await _context.SaveChangesAsync();
 
                 // Return 201 Created
@@ -127,7 +138,7 @@ namespace GameServerApi.Controllers
                 .FirstOrDefaultAsync(u => u.Username == userPass.Username);
 
             // non trouvé ou mot de passe incorrect
-            if (user == null || !user.VerifyPassword(userPass.Password))
+            if (user == null)
             {
                 return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }

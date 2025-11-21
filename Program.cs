@@ -19,7 +19,6 @@ public class Program
         builder.Services.AddOpenApi();
 
         builder.Services.AddDbContext<UserContext>();
-        builder.Services.AddDbContext<ProgressionContext>();
 
         builder.Services.AddScoped<PasswordHasher<User>>();
 
@@ -36,9 +35,6 @@ public class Program
 
         var app = builder.Build();
 
-        app.UseCors("AllowAll");
-        // app.UseCors("AllowSpecificOrigin");
-
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -47,6 +43,8 @@ public class Program
         }
 
         app.UseAuthorization();
+        app.UseCors("AllowAll");
+        // app.UseCors("AllowSpecificOrigin");
 
 
         app.MapControllers();
