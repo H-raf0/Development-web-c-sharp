@@ -132,6 +132,31 @@ namespace GameServerApi.Controllers
             });
         }
 
+        // GET /api/Game/BestScore
+        [HttpGet("Game/BestScore/")]
+        public async Task<ActionResult<object>> GetBestScore()
+        {
+            if (!await _context.Progressions.AnyAsync())
+            {
+                return NotFound(new
+                {
+                    error = "NO_PROGRESSIONS",
+                    message = "No progressions found"
+                });
+            }
+
+            var best = await _context.Progressions
+                .OrderByDescending(p => p.Count)
+                .FirstAsync();
+
+            return Ok(new
+            {
+                userId = best.UserId,
+                bestScore = best.Count
+            });
+        }
+
+
 
     }
 }
