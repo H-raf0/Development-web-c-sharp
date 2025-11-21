@@ -10,19 +10,19 @@ namespace GameServerApi.Controllers
     [ApiController]
     public class GameController : ControllerBase
     {
-        
+
         private readonly ProgressionContext _context;
         public GameController(ProgressionContext ctx)
         {
             _context = ctx;
         }
 
-        
+
         // GET /api/Game/Initialize/{userId}
         [HttpGet("Initialize/{userId}")]
         public async Task<ActionResult<Progression>> InitializeProgression(int userId)
         {
-            
+
             bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
             if (exists)
             {
@@ -46,7 +46,7 @@ namespace GameServerApi.Controllers
                     "INITIALIZATION_FAILED"
                 ));
             }
-        
+
         }
 
         // GET /api/Game/Progression/{userId}
@@ -59,11 +59,55 @@ namespace GameServerApi.Controllers
 
             if (progression == null)
             {
-                return NotFound(new ErrorResponse("Progression not found", "PROGRESSION_NOT_FOUND"));
+                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
 
             return Ok(progression);
         }
-        
+
+
+        // GET /api/Game/ResetCost/{userId}
+        [HttpGet("Game/ResetCost/{userId}")]
+        public async Task<ActionResult<int>> ResetCost(int userId)
+        {
+            var progression = await _context.Progressions
+                .Where(p => p.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            if (progression == null)
+            {
+                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+            }
+
+            int cost = progression.CalculateResetCost();
+            return Ok(cost);
+        }
+
+
+
+        // GET /api/Game/Click/{userId}
+        [HttpGet("Game/Click/{userId}")]
+        public async Task<ActionResult<object>> Click(int userId)
+        {
+            var progression = await _context.Progressions
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (progression == null)
+            {
+                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+            }
+
+            progression.Count += 1;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                count = progression.Count,
+                multiplier = progression.Multiplier
+            });
+        }
+
+
     }
 }
